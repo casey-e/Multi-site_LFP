@@ -69,7 +69,7 @@ def timer (func):
 def choose_region_chanels_dict():
     if mouse in ['Mouse1','Mouse2','Mouse3', 'Mouse6','Mouse7']:
         region_channels_dict=region_channels_dict_cohort2
-    elif mouse in ['Mouse4', 'Mouse5']:
+    elif mouse in ['Mouse4', 'Mouse5', 'Mouse8']:
         region_channels_dict=region_channels_dict_molex
     elif mouse=='array1':
         region_channels_dict=region_channels_dict_E_A1
@@ -627,38 +627,38 @@ def clasify_events_base_on_time(event1,event2,treshold,mode='left'):
     far=np.array(far)
     return near, far
 
-# def make_intervals_based_on_continuous_signal(continuous, timestamps, treshold, minimum_duration):
-#     rest=np.where(continuous>=treshold,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
-#     labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
-#     slices=find_objects(labelled_rest) # make slices for every period
-#     # long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
-#     start_index=[i[0].start for i in slices] #sample long_slices
-#     stop_index=[i[0].stop for i in slices] #sample long_slices
-#     rest_starts=np.array(timestamps[start_index])
-#     rest_stops=np.array(timestamps[stop_index])
-#     durations_criteria=rest_stops-rest_starts>=minimum_duration
-#     rest_starts=rest_starts[durations_criteria]
-#     rest_stops=rest_stops[durations_criteria]
-#     return rest_starts, rest_stops
+def make_intervals_based_on_continuous_signal(continuous, timestamps, treshold, minimum_duration):
+    rest=np.where(continuous>=treshold,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
+    labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
+    slices=find_objects(labelled_rest) # make slices for every period
+    # long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
+    start_index=[i[0].start for i in slices] #sample long_slices
+    stop_index=[i[0].stop for i in slices] #sample long_slices
+    rest_starts=np.array(timestamps[start_index])
+    rest_stops=np.array(timestamps[stop_index])
+    durations_criteria=rest_stops-rest_starts>=minimum_duration
+    rest_starts2=rest_starts[durations_criteria]
+    rest_stops2=rest_stops[durations_criteria]
+    return rest_starts, rest_stops
     
-# ## Create movement stop event and filter the events close to pellet removal
-# from scipy.ndimage import label, find_objects # import neccesary functions from scipy
-# rest=np.where(scaled_centroids['Speed'].values<0.5,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
-# labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
-# slices=find_objects(labelled_rest) # make slices for every period
-# long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
-# # indexes=np.sort(np.random.choice(list(range(len(long_slices))), size=len(events['left_poke']), replace=False)) #Make indxes to sample long_slices, of the same lenght than left_poke
-# # slices_sampled=[long_slices[i] for i in indexes] #sample long_slices
+## Create movement stop event and filter the events close to pellet removal
+from scipy.ndimage import label, find_objects # import neccesary functions from scipy
+rest=np.where(scaled_centroids['Speed'].values<0.5,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
+labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
+slices=find_objects(labelled_rest) # make slices for every period
+long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
+# indexes=np.sort(np.random.choice(list(range(len(long_slices))), size=len(events['left_poke']), replace=False)) #Make indxes to sample long_slices, of the same lenght than left_poke
+# slices_sampled=[long_slices[i] for i in indexes] #sample long_slices
 
-# start_index=[i[0].start for i in long_slices] #sample long_slices
-# stop_index=[i[0].stop for i in long_slices] #sample long_slices
-# # start_index, stop_index=[slices_sampled[i][0].start for i in slices_sampled]
-# rest_starts=np.array(scaled_centroids.reset_index().loc[start_index, 'index'])
-# rest_stops=np.array(scaled_centroids.reset_index().loc[stop_index, 'index'])
-# #Discard events closer than 10 seconds from pellet remova
-# contaminated_rest_starts, rest_starts=clasify_events_base_on_time(rest_starts, events['pellet_removal'],30,mode='two-sides')
+start_index=[i[0].start for i in long_slices] #sample long_slices
+stop_index=[i[0].stop for i in long_slices] #sample long_slices
+# start_index, stop_index=[slices_sampled[i][0].start for i in slices_sampled]
+rest_starts=np.array(scaled_centroids.reset_index().loc[start_index, 'index'])
+rest_stops=np.array(scaled_centroids.reset_index().loc[stop_index, 'index'])
+#Discard events closer than 10 seconds from pellet remova
+contaminated_rest_starts, rest_starts=clasify_events_base_on_time(rest_starts, events['pellet_removal'],30,mode='two-sides')
 
-# events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
+events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
     
     
 
@@ -1018,7 +1018,7 @@ vol_feeding_df_list=[] # this list will have dataframes for independent componen
 event_of_interest=['left_poke', 'pellet_removal', 'right_poke']
 centroids=['Centroid1_X', 'Centroid1_Y']
 
-for file in cc:
+for file in zz:
     mouse=set_variable_from_list_and_filename(file, mice_list)
     # day=set_variable_from_list_and_filename(file, day_list, default='unique_day')
     region_channels_dict=choose_region_chanels_dict() #Function to choose the right dictionary according to the mouse
@@ -1094,7 +1094,7 @@ for file in cc:
     
     events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
     
-    # rest_starts2, rest_stops2 = make_intervals_based_on_continuous_signal(scaled_centroids['Speed'].values, scaled_centroids.index, 0.5, 5)
+    rest_starts2, rest_stops2 = make_intervals_based_on_continuous_signal(scaled_centroids['Speed'].values, scaled_centroids.index, 0.5, 15)
     # contaminated_rest_starts2, rest_starts2=clasify_events_base_on_time(rest_starts2, events['pellet_removal'],30,mode='two-sides')
     
     # # scaled_centroids_subset=scaled_centroids.loc[30070:30120,:].reset_index()
@@ -1111,7 +1111,7 @@ for file in cc:
     #Calculate distance to the position of left poke. Use events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))]
     # as the event parameter, to avoid using events that happened when the camera wasn't working (lights off)
     
-    scaled_centroids['Distance_to_left_poke']=position_of_event(scaled_centroids['Centroid_X (cm)'].values, scaled_centroids['Centroid_Y (cm)'].values,np.array(scaled_centroids.index),events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))], np.mean)
+    scaled_centroids['Distance_to_left_poke']=position_of_event(scaled_centroids['Centroid_X (cm)'].values, scaled_centroids['Centroid_Y (cm)'].values,np.array(scaled_centroids.index),events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))], np.median)
     
     #Run this with different events to verify the function works
     for event in events.keys():
@@ -1146,10 +1146,44 @@ for file in cc:
         g.set_ylabels('Distance to left poke (cm)')
         g.set_xlabels('Time (sec)')
     #plt.ylim(-0.002,0.002)
+        plt.title('rest_starts not filtered')
         plt.show()
     
-    del(df3)
     
+    
+    df2.loc[(df2['Distance_to_left_poke']<=10)&(df2['Event']=='rest_starts'), 'Event']=np.nan
+    events['rest_starts']=df2[df2.Event=='rest_starts'].index.values
+    
+    df3=df2.copy()
+    # df3[['Centroid_X (cm)', 'Centroid_Y (cm)', 'Speed', 'Distance_to_left_poke']].fillna(method='ffill', inplace=True)
+    df3=peri_event_time(df2.drop(columns='Event'), pd.DataFrame(df2['Event']), -20,20,2,all_trials=False)
+    df3=df3[(df3['Event']!='exploratory_right_poke')&(df3['Event']!='mistake_right_poke')]
+    with sns.plotting_context("poster"):
+        g=sns.relplot(x='Peri-event_time', y='Speed', data=df3,kind='line', hue='Event')
+        # g.fig.suptitle('Functional network '+i, y=1.05, fontsize='large', fontweight='bold')
+        g.map(plt.axhline,y=0.5,ls="--",c="black")
+        g.map(plt.axvline,x=0,ls="--",c="gray")
+    #g.set_titles('{col_name}_{row_name}', fontsize='xx-large', fontweight='bold')
+        g.set_ylabels('Speed (cm/sec)')
+        g.set_xlabels('Time (sec)')
+    #plt.ylim(-0.002,0.002)
+        plt.show()
+        
+    with sns.plotting_context("poster"):
+        g=sns.relplot(x='Peri-event_time', y='Distance_to_left_poke', data=df3,kind='line', hue='Event')
+        # g.fig.suptitle('Functional network '+i, y=1.05, fontsize='large', fontweight='bold')
+        g.map(plt.axhline,y=1,ls="--",c="black")
+        g.map(plt.axvline,x=0,ls="--",c="gray")
+    #g.set_titles('{col_name}_{row_name}', fontsize='xx-large', fontweight='bold')
+        g.set_ylabels('Distance to left poke (cm)')
+        g.set_xlabels('Time (sec)')
+    #plt.ylim(-0.002,0.002)
+        plt.title('rest_starts not filtered')
+        plt.show()
+    
+    position_of_event(scaled_centroids['Centroid_X (cm)'].values, scaled_centroids['Centroid_Y (cm)'].values,np.array(scaled_centroids.index),events['rest_starts'])
+
+    del(df3)
     # plt.plot(df2['Centroid_X (cm)'],df2['Centroid_Y (cm)'],color='gray',alpha=0.5, label='Trajectory')
     # plt.scatter(df3.loc[(df3['Event']=='left_poke')&(df3['Peri-event_time']==0),'Centroid_X (cm)'],df3.loc[(df3['Event']=='left_poke')&(df3['Peri-event_time']==0),'Centroid_Y (cm)'], color='black',s=10, label='Event positions')
     # plt.legend()
@@ -1245,10 +1279,10 @@ vol_feeding_dfB.reset_index(drop=True, inplace=True)
 vol_feeding_dfB=vol_feeding_dfB.groupby(['MouseId','Event', 'Peri-event_time'],as_index=False).mean()
 
 # Plot peri-event histograms of components, to evaluate if they change with the infusion
-vol_feeding_dfC=vol_feeding_dfB[(vol_feeding_dfB['Event']=='pellet_removal')|(vol_feeding_dfB['Event']=='rest_starts')|(vol_feeding_dfB['Event']=='contaminated_rest_starts')]
+vol_feeding_dfC=vol_feeding_dfB[(vol_feeding_dfB['Event']=='pellet_removal')|(vol_feeding_dfB['Event']=='rest_starts')]
 for i in [j for j in vol_feeding_dfB.columns if 'IC_' in j]:
     with sns.plotting_context("talk"):
-        g=sns.relplot(x='Peri-event_time', y=i, data=vol_feeding_dfC,kind='line', hue='Event', hue_order=['left_poke','pellet_removal', 'rest_starts', 'contaminated_rest_starts'], col='MouseId',legend=None)
+        g=sns.relplot(x='Peri-event_time', y=i, data=vol_feeding_dfB,kind='line', col='Event', col_order=['left_poke','pellet_removal', 'right_poke','rest_starts', 'movement_initiation'], legend=None)
         g.fig.suptitle(i, y=1.05, fontsize='large', fontweight='bold')
         g.map(plt.axhline,y=0,ls="--",c="black")
         g.map(plt.axvline,x=0,ls="--",c="gray")
