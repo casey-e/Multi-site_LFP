@@ -16,12 +16,13 @@ from scipy import signal
 import sys
 import statsmodels.formula.api as smf
 import time
+from sklearn.decomposition import FastICA, PCA
 # from mne_connectivity import spectral_connectivity_epochs
 
-sys.path.append('C:/Users/casey.e/Box/Kravitz Lab Box Drive/Eric/Scripts/Python scripts')
+sys.path.append('C:/Users/etocc/Documents/Python Scripts')
 import nexfile
 reader = nexfile.Reader(useNumpy=True)
-from sklearn.decomposition import FastICA, PCA
+
 
 
 
@@ -398,11 +399,45 @@ def delete_time_gaps(df, sampling_rate):
 
 #Make peri-event_time column
 def peri_event_time(continuous, events, lower_limit, higher_limit, number_of_decimals=3, all_trials=False):
+    """
+    Make a column with peri-event times, using the formula time-event_time, for time value from lower_limit to higher limit.
+
+    Parameters
+    ----------
+    continuous : pandas.DataFrame
+        Dataframe with continuous variables (LFP, speed, position) in each column, and timestamps as index.
+    events : dict or pandas.DataFrame
+        Timestamps of each event.If a dict, keys must be events name as str and values must be timestamps of each event as list, numpy.array or pandas.Serie;
+        if a pandas.DataFrame, it must be a column named "Event" with event's names, and timestamps as index.
+    lower_limit : float
+        Lower limit of the time interval.
+    higher_limit : float
+        Higher limit of the time interval.
+    number_of_decimals : int, optional
+        Number of decimals of the peri-event time; it should be the same as the number of decimals in the index of continuous paramater. The default is 3.
+    all_trials : bool, optional
+        If True, it returns a dataframe with all trials of each event, and adds "Event_number" column, containing counts of each event. If it is False,
+        it averages trials of the same event timestamp-wise, and returns a dataframe with averages per event. The default is False.
+
+    Raises
+    ------
+    TypeError
+        If continuous type is not pandas.DataFrame or if events type is neither dict or pandas.DataFrame.
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        DataFRame with original continous columns, plus an "Event" column with event names, and a "Peri-event_time" column with peri-event timestamps.
+        Timestamps outside of higher and lower limits are not included, and index doe not have meaningful information other than row id.
+        Read "all_trials" description above for differences in the returned DataFrame if aa_trials is True or False.
+
+    """
+    
     if type(events)==dict:
         events_df=pd.DataFrame({key:pd.Series(value) for key,value in events.items()}).melt(var_name='Event', value_name='Timestamp').dropna().set_index('Timestamp').sort_index()
         events_df.index=np.round(event_df.index, 3)
     elif type(events)==pd.DataFrame:
-        events_df=events.dropna()
+        events_df=events.dropna().sort_index()
     else:
         raise TypeError ('"events" must be either a dictionary with keys="Event names":values=list of timestamps, or a pandas.DataFrame with "Event" column corresponding to event name, and timestamps as index')
     if type(continuous) != pd.DataFrame:
@@ -441,7 +476,23 @@ def peri_event_time(continuous, events, lower_limit, higher_limit, number_of_dec
   # print('Done '+mouse)
   
 def scale_centroids(centroids, x_dim,y_dim):
-    
+    """
+    Scale centroids to match the real values in appropiate scale. It assumes position at lower and higher limits of each dimension have been recorded.
+
+    Parameters
+    ----------
+    centroids : numpy.ndarray of shape (2 x n_timestamps)
+        Values of X_centroid and Y_centroid to be scaled.
+    x_dim : float
+        Value from end to end of X coordinate.
+    y_dim : float
+        Value from end to end of Y coordinate.
+
+    Returns
+    -------
+    numpy.ndarray with scaled values.
+
+    """
     x_min, x_max=centroids[0].min(),centroids[0].max()
     y_min, y_max=centroids[1].min(),centroids[1].max()
     x_dist=x_max-x_min
@@ -521,7 +572,7 @@ def calculate_speed(X_values, Y_values, timestamps, smooth=0):
 
     Returns
     -------
-    speed: NUMPY ARRAY
+    speed: numpy.ndarray
         Values of scalar speed
 
     '''
@@ -566,7 +617,38 @@ def calculate_speed(X_values, Y_values, timestamps, smooth=0):
     return(speed)
 
 def position_of_event(X_values, Y_values, timestamps, events, function=np.median, plot=True):
-    
+    """
+    Calculate the average position at with an event occurs and the distance to that event at each timestamp
+
+    Parameters
+    ----------
+    X_values : np.ndarray of shape (1 X n_timestamps)
+        X_centroid positions at each timestamp. Must be of the same lenght than Y_values and timestamps
+    Y_values : np.ndarray of shape (1 X n_timestamps)
+        Y_centroid positions at each timestamp. Must be of the same lenght than X_values and timestamps
+    timestamps : np.ndarray of shape (1 X n_timestamps)
+        Timestamps. Must be of the same lenght than X_values and Y_values.
+    events : one dimensional numpy.array or list of floats
+        Timestamps of the event.
+    function : function, optional
+        Function to be used to estimate the most likely position of the event. The default is np.median.
+    plot : bool, optional
+        If True, wiil plot all the trajectory, position of each event and the most likely position of the event. The default is True.
+
+    Raises
+    ------
+    TypeError
+        If X_values, Y_values or timestamps is not np.ndarray.
+    error
+        DESCRIPTION.
+    ValueError
+        If X_values lenght, Y_values lenght and timestamps lenght are not the same.
+
+    Returns
+    -------
+    Event most likely position in X dimension (float) and in in Y dimension (float), and distance to event (np.ndarray of shape (1 x n_timestamps)).
+
+    """
     # if type(events)==dict:
     #     events_df=pd.DataFrame({key:pd.Series(value) for key,value in events.items()}).melt(var_name='Event', value_name='Timestamp').dropna().set_index('Timestamp').sort_index()
     #     events_df.index=np.round(event_df.index, 3)
@@ -593,15 +675,41 @@ def position_of_event(X_values, Y_values, timestamps, events, function=np.median
         plt.plot(df['X'],df['Y'],color='gray',alpha=0.5, label='Trajectory')
         plt.scatter(df.loc[df['Event']=='event','X'],df.loc[df['Event']=='event','Y'], color='black',s=10, label='Event positions')
         plt.scatter(event_XPos,event_YPos, color='red', marker='D',s=50, label='Event expected position')
-        plt.legend()
+        plt.legend(framealpha=0.5)
+        plt.axis("equal")
+        ax = plt.gca()
+        ax.set_aspect('equal', adjustable='box')
         plt.show()
     
     dist=np.sqrt((X_values-event_XPos)**2+(Y_values-event_YPos)**2)
-    return(dist)
+    return(event_XPos,event_YPos,dist)
     # XPos_low_ci=np.quantile(df.loc[df['Event']=='event','X'],0.025)
     # XPos_high_ci=np.quantile(df.loc[df['Event']=='event','X'],0.975)
     
 def clasify_events_base_on_time(event1,event2,treshold,mode='left'):
+    """
+    Clasiffy an event in two categories based on how close in time it occurs from an event of reference.
+
+    Parameters
+    ----------
+    event1 : numpy.array of shape (1 x n)
+        Event to classify.
+    event2 : numpy.array of shape (1 x m)
+        Event of reference.
+    treshold : TYPE
+        Threshold amount of time used to classify events.
+    mode : str, optional
+        Define the mode of evaluation of proximity. "left", only looks event1 that occur before event2; "right", 
+        only looks event1 that ocurr after event2; "both", look temporal proximity before and after. The default is 'left'.
+
+    Returns
+    -------
+    near : np.array of shape (1 x o)
+        Subset of event1 classified as temporally close to event2.
+    far : np.array of shape (1 x p).
+        Subset of event1 classified as temporally far from event2.
+
+    """
     near=[]
     far=[]
     for i in event1:
@@ -631,36 +739,81 @@ def make_intervals_based_on_continuous_signal(continuous, timestamps, treshold, 
     rest=np.where(continuous>=treshold,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
     labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
     slices=find_objects(labelled_rest) # make slices for every period
+    print("slices lenght", len(slices))
     # long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
     start_index=[i[0].start for i in slices] #sample long_slices
     stop_index=[i[0].stop for i in slices] #sample long_slices
     rest_starts=np.array(timestamps[start_index])
     rest_stops=np.array(timestamps[stop_index])
+    print("rest_starts lenght", len(rest_starts))
     durations_criteria=rest_stops-rest_starts>=minimum_duration
     rest_starts2=rest_starts[durations_criteria]
     rest_stops2=rest_stops[durations_criteria]
-    return rest_starts, rest_stops
+    return rest_starts2, rest_stops2,durations_criteria
     
-## Create movement stop event and filter the events close to pellet removal
-from scipy.ndimage import label, find_objects # import neccesary functions from scipy
-rest=np.where(scaled_centroids['Speed'].values<0.5,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
-labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
-slices=find_objects(labelled_rest) # make slices for every period
-long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
-# indexes=np.sort(np.random.choice(list(range(len(long_slices))), size=len(events['left_poke']), replace=False)) #Make indxes to sample long_slices, of the same lenght than left_poke
-# slices_sampled=[long_slices[i] for i in indexes] #sample long_slices
+# ## Create movement stop event and filter the events close to pellet removal
+# from scipy.ndimage import label, find_objects # import neccesary functions from scipy
+# rest=np.where(scaled_centroids['Speed'].values<0.5,1,0) #Identify resting periods based using a treshold of speed=0.5 cm/seg
+# labelled_rest,number_of_feaures=label(rest) # label every period of consecutive rest with a nuumber
+# slices=find_objects(labelled_rest) # make slices for every period
+# long_slices=[i for i in slices if labelled_rest[i].size>150] #filter for periods longer than 5 seconds 
+# # indexes=np.sort(np.random.choice(list(range(len(long_slices))), size=len(events['left_poke']), replace=False)) #Make indxes to sample long_slices, of the same lenght than left_poke
+# # slices_sampled=[long_slices[i] for i in indexes] #sample long_slices
 
-start_index=[i[0].start for i in long_slices] #sample long_slices
-stop_index=[i[0].stop for i in long_slices] #sample long_slices
-# start_index, stop_index=[slices_sampled[i][0].start for i in slices_sampled]
-rest_starts=np.array(scaled_centroids.reset_index().loc[start_index, 'index'])
-rest_stops=np.array(scaled_centroids.reset_index().loc[stop_index, 'index'])
-#Discard events closer than 10 seconds from pellet remova
-contaminated_rest_starts, rest_starts=clasify_events_base_on_time(rest_starts, events['pellet_removal'],30,mode='two-sides')
+# start_index=[i[0].start for i in long_slices] #sample long_slices
+# stop_index=[i[0].stop for i in long_slices] #sample long_slices
+# # start_index, stop_index=[slices_sampled[i][0].start for i in slices_sampled]
+# rest_starts=np.array(scaled_centroids.reset_index().loc[start_index, 'index'])
+# rest_stops=np.array(scaled_centroids.reset_index().loc[stop_index, 'index'])
+# #Discard events closer than 10 seconds from pellet remova
+# contaminated_rest_starts, rest_starts=clasify_events_base_on_time(rest_starts, events['pellet_removal'],30,mode='two-sides')
 
-events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
+# events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
     
-    
+def perievent_histogram(continuous, events, lower_limit, higher_limit, number_of_decimals=3):
+    """
+    Plot peri-event histograms and return dataframe with values
+
+    Parameters
+    ----------
+    continuous : pandas.DataFrame
+        Dataframe with continuous variables to be plotted in each column, and timestamps as index.
+    events : list, dict, pandas.DataFrame
+        Timestamps of each event.If a list, values must be the timestamps of the event. If more than one type of event is analyzed,
+        a dict or pandas.DataFrame type must be used. If a dict, keys must be events name as str and values must be timestamps of 
+        each event as list, numpy.array or pandas.Serie; if a pandas.DataFrame, it must be a column named "Event" with event's names, 
+        and timestamps as index.
+    lower_limit : float
+        Lower limit of the time interval.
+    higher_limit : float
+        Higher limit of the time interval.
+    number_of_decimals : int, optional
+        Number of decimals of the peri-event time; it should be the same as the number of decimals in the index of continuous paramater.
+        The default is 3.
+
+    Raises
+    ------
+    TypeError
+        If continuous type is not pandas.DataFrame or if events type is neither list, dict or pandas.DataFrame.
+
+    Returns
+    -------
+    pandas.DataFrame with the numeric results of the peri-event histograms.
+
+    """
+    if type(events)!=dict and type(events)!=pd.DataFrame and type(events)!=list:
+        raise TypeError ('"events" must be either a list of timestamps, a dictionary with keys="Event names":values=list of timestamps, or a pandas.DataFrame with "Event" column corresponding to event name, and timestamps as index')
+    if type(events)==list:
+        events={'event':events}
+    df=incorporate_events_to_continuous(continuous,events, exact=False)
+    df=peri_event_time(continuous, pd.DataFrame(df['Event']), lower_limit, higher_limit, number_of_decimals, all_trials=False)
+    with sns.plotting_context("poster"):
+        for i in continuous.columns:
+            g=sns.relplot(x='Peri-event_time', y=i, data=df,kind='line', hue='Event')
+            g.map(plt.axvline,x=0,ls="--",c="gray")
+            plt.title(i)
+            plt.show()
+    return df
 
 #%%
 ### Set behaviors to use to train ica by including them in behaviors_lis. ###
@@ -1009,9 +1162,12 @@ for i in weights_filtered.index:
 
 
 #%%
+#Load weight_df
+os.chdir('C:/Users/etocc/Documents/Multi-site project')
+weights=pd.read_csv('weights_07-29-2022.csv', index_col=0)
 
 #Project ica to voluntary whole feeding recordings and use components to predict consumption
-directory='C:/Users/casey.e/Box/Kravitz Lab Box Drive/Eric/Multi-sites project/Over night freely feeding with FED/Nex_files'
+directory='C:/Users/etocc/Documents/Multi-site project/Nex_files'
 os.chdir(directory)
 
 vol_feeding_df_list=[] # this list will have dataframes for independent components of each whole recording
@@ -1094,7 +1250,7 @@ for file in zz:
     
     events.update({'rest_starts':rest_starts, 'contaminated_rest_starts':contaminated_rest_starts})
     
-    rest_starts2, rest_stops2 = make_intervals_based_on_continuous_signal(scaled_centroids['Speed'].values, scaled_centroids.index, 0.5, 15)
+    rest_starts2, rest_stops2, criteria = make_intervals_based_on_continuous_signal(scaled_centroids['Speed'].values, scaled_centroids.index, 0.5, 15)
     # contaminated_rest_starts2, rest_starts2=clasify_events_base_on_time(rest_starts2, events['pellet_removal'],30,mode='two-sides')
     
     # # scaled_centroids_subset=scaled_centroids.loc[30070:30120,:].reset_index()
@@ -1111,7 +1267,7 @@ for file in zz:
     #Calculate distance to the position of left poke. Use events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))]
     # as the event parameter, to avoid using events that happened when the camera wasn't working (lights off)
     
-    scaled_centroids['Distance_to_left_poke']=position_of_event(scaled_centroids['Centroid_X (cm)'].values, scaled_centroids['Centroid_Y (cm)'].values,np.array(scaled_centroids.index),events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))], np.median)
+    scaled_centroids['Distance_to_left_poke']=position_of_event(scaled_centroids['Centroid_X (cm)'].values, scaled_centroids['Centroid_Y (cm)'].values,np.array(scaled_centroids.index),events['left_poke'][(events['left_poke']>np.min(scaled_centroids.index))&(events['left_poke']<np.max(scaled_centroids.index))], np.median)[2]
     
     #Run this with different events to verify the function works
     for event in events.keys():
