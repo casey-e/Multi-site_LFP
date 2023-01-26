@@ -10,7 +10,7 @@ A module with the functions currently available can be found [here](https://gith
 
 In the [example](https://github.com/casey-e/Multi-site_LFP/tree/main/Functions/Example) provided, a mouse was videotracked for an over-night session in which it was allowed to freely explore a behavioral cage of 17x30 cm with a feeder located at the middle of the right wall of the cage. The feeder delivers a rounded food pellet and, when the mouse takes it, it sends a TTL signal to the recording system, waits 20 seconds and then delivers another food pellet. The file  [Centroids.csv](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Example/Centroids.csv) contains "X" and "Y" positions at each timestamp, obtained from the videotrack, and the file [feeding.pickle](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Example/feeding.pickle) contains timestamps corresponding to each event of removal of a food pellet from the feeder (recorded as a TTL sent by the feeder).
 
-The [example](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Example/example.py) uses functions provided [here](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Processsing_functions.py) to scale X and Y values according to the dimensions of the cage and calculates the scalar speed at each timestamp. Then it identifies periods of rest initiations (rest_starts), identified as stop of locomotion (yes, this is not perfect) and uses a function to identify the positions of rest initiations and feeding. Hovever, positions of rest initiations largely overlap with positions of feeding (figures below).  
+The [example](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Example/example.py) uses functions provided [here](https://github.com/casey-e/Multi-site_LFP/blob/main/Functions/Processsing_functions.py) to scale X and Y values according to the dimensions of the cage and calculates the scalar speed at each timestamp. Then it identifies periods of rest start, identified as stop of locomotion (yes, this is not perfect) and uses a function to identify the positions of rest start and feeding. Interestingly, most of the positions of rest start are very close to positions of feeding (figures below).  
   
   
 ![image](https://user-images.githubusercontent.com/92745842/214613390-0dfdf28b-ee0c-409e-8a6a-90e35b4c4c23.png)
@@ -31,10 +31,11 @@ Whith the function peri-events histograms, it is clear that the mouse stop movin
   ![image](https://user-images.githubusercontent.com/92745842/214615623-34b847dc-175a-4286-8d70-2ec14c660882.png)
   
   
-We can further confirm this by calculating the distance to the most likely feeding position at each time and pltting peri-event histograms.  
+This is further confirmed calculating the distance to the most likely feeding position at each time and plotting peri-event histograms for each event.  
   
     
     
   ![image](https://user-images.githubusercontent.com/92745842/214616139-b01a71a9-b8e4-49bc-ad30-3339d3eb2f00.png)
 
 
+While feeding was removed from rest starts, this behavioral dissection is not suffucuent to completelly isolate rest starts. For instance, real rest starts are still including short movements like grooming, which should be differentiated through a different method, not included here.
